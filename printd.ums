@@ -2,4 +2,36 @@
     .temps r6,r7
 
 print:
+    push r1 on stack r2
+    push r3 on stack r2
+    r3 := m[r0][r2+2] //get top value from stack
+    r4 := r3 / 10
+
+    //keep track of number of digits
+    r6 := 1
+
+    print_loop:
+
+    if (r4 == 0) goto print_digits
+
+
+    //recursive call
+    r6 := r6 + 1
+    //breaks up number into single digits 
+    //and push onto back of stack
+    r5 := r3 mod 10
+    push r5 on stack r2
+    push r4 on stack r2
+
+    goto print_loop linking r1
+        
+print_digits:
+    pop r5 off stack r2
+    r5 := r5 + '0'
+    output r5
+    r6 := r6 - 1
+    if r6 > 0 goto print_digits linking r1
+
+finish_print:
     
+
