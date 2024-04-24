@@ -1,0 +1,60 @@
+    .zero r0
+    .temp r6,r7 
+.section data                                       // testing data, saved in stack
+    val1: .data 65                                  
+    val2: .data 10
+    val3: .data 9                                   // single-digit number test
+    val4: .data 0                                   // single-digit number test
+    val5: .data -34560
+    val6: .data 0xffffffff                          // -1
+    val7: .data 0x80000000                          // biggest negative value
+    val8: .data 0x7fffffff                          // biggest positive value
+.section text
+main:  
+    push r1 on stack r2                             // save return value
+
+    //print val1 "65"
+    push m[r0][val1] on stack r2 
+    goto print_d linking r1
+    pop stack r2
+    output "\n"
+
+    //print val3 "9"
+    push m[r0][val3] on stack r2 
+    goto print_d linking r1
+    pop stack r2
+    output "\n"
+
+    //print val4 "0"
+    push m[r0][val4] on stack r2 
+    goto print_d linking r1
+    pop stack r2
+    output "\n"
+
+    //print val5
+    push m[r0][val5] on stack r2 
+    goto print_d linking r1
+    pop stack r2
+    output "\n"
+
+    //print val6
+    push m[r0][val6] on stack r2 
+    goto print_d linking r1
+    pop stack r2
+    output "\n"
+
+    //print val7: Biggest negative value
+    push m[r0][val7] on stack r2 
+    goto print_d linking r1
+    pop stack r2
+    output "\n"
+
+    //print val8
+    push m[r0][val8] on stack r2 
+    goto print_d linking r1
+    pop stack r2
+    output "\n"
+
+    pop r5 off stack r2                             // get return value
+    r1 := 0                                         // EXIT_SUCCESS
+    goto r5
