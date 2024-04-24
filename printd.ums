@@ -1,37 +1,60 @@
     .zero r0
-    .temps r6,r7
+    .temp r6,r7 
+.section data                                       // testing data, saved in stack
+    val1: .data 65                                  
+    val2: .data 10
+    val3: .data 9                                   // single-digit number test
+    val4: .data 0                                   // single-digit number test
+    val5: .data -34560
+    val6: .data 0xffffffff                          // -1
+    val7: .data 0x80000000                          // biggest negative value
+    val8: .data 0x7fffffff                          // biggest positive value
+.section text
+main:  
+    push r1 on stack r2                             // save return value
 
-print:
-    push r1 on stack r2
-    push r3 on stack r2
-    r3 := m[r0][r2+2] //get top value from stack
-    r4 := r3 / 10
+    //print val1 "65"
+    push m[r0][val1] on stack r2 
+    goto print_d linking r1
+    pop stack r2
+    output "\n"
 
-    //keep track of number of digits
-    r6 := 1
+    //print val3 "9"
+    push m[r0][val3] on stack r2 
+    goto print_d linking r1
+    pop stack r2
+    output "\n"
 
-    print_loop:
+    //print val4 "0"
+    push m[r0][val4] on stack r2 
+    goto print_d linking r1
+    pop stack r2
+    output "\n"
 
-    if (r4 == 0) goto print_digits
+    //print val5
+    push m[r0][val5] on stack r2 
+    goto print_d linking r1
+    pop stack r2
+    output "\n"
 
+    //print val6
+    push m[r0][val6] on stack r2 
+    goto print_d linking r1
+    pop stack r2
+    output "\n"
 
-    //recursive call
-    r6 := r6 + 1
-    //breaks up number into single digits 
-    //and push onto back of stack
-    r5 := r3 mod 10
-    push r5 on stack r2
-    push r4 on stack r2
+    //print val7: Biggest negative value
+    push m[r0][val7] on stack r2 
+    goto print_d linking r1
+    pop stack r2
+    output "\n"
 
-    goto print_loop linking r1
-        
-print_digits:
-    pop r5 off stack r2
-    r5 := r5 + '0'
-    output r5
-    r6 := r6 - 1
-    if r6 > 0 goto print_digits linking r1
+    //print val8
+    push m[r0][val8] on stack r2 
+    goto print_d linking r1
+    pop stack r2
+    output "\n"
 
-finish_print:
-    
-
+    pop r5 off stack r2                             // get return value
+    r1 := 0                                         // EXIT_SUCCESS
+    goto r5
