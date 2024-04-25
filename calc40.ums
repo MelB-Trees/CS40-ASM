@@ -1,118 +1,206 @@
     .zero r0
-    .temps r6,r7
-
-main:
-
+    .temp r6, r7
     .section rodata
+    jumptable:
     .space 256
-    //jumptable:
-    //.section init 
+    .section init
+main:
+    push r1 on stack r2                                             // save return value
+    push r3 on stack r2                                             // save r3 value
 
-    r3 = 0
-    goto init_jumptable
+    r3 := jumptable
+
+    goto init_jumptable linking r1  
 
 init_jumptable: 
-    if (r3 > 255) goto 
-    $leave function
-
-    m[r0][r3 + jumptable] = input_error
-    r3 = r3+1
-    $initializes every element in jumptable to input_error
+    if (r3 >s jumptable + 255 ) goto init_jumptable_2 using r5      // leave function
+    m[r0][r3] := input_error
+    r3 := r3 + 1
+    
     goto init_jumptable
 
+init_jumptable_2:
+    m[r0][jumptable + '0'] := digit 
+    m[r0][jumptable + '1'] := digit 
+    m[r0][jumptable + '2'] := digit 
+    m[r0][jumptable + '3'] := digit 
+    m[r0][jumptable + '4'] := digit
+    m[r0][jumptable + '5'] := digit  
+    m[r0][jumptable + '6'] := digit 
+    m[r0][jumptable + '7'] := digit 
+    m[r0][jumptable + '8'] := digit 
+    m[r0][jumptable + '9'] := digit
 
-push r1 on stack r2                             // save return value
+    m[r0][jumptable + ' '] := waiting 
+
+    m[r0][jumptable + '*'] := mul 
+    m[r0][jumptable + '+'] := add
+    m[r0][jumptable + '-'] := sub
+    m[r0][jumptable + '/'] := div
+    m[r0][jumptable + '|'] := bor
+    m[r0][jumptable + '&'] := band
+
+    //m[r0][jumptable + 'n'] := push_num
+
+    goto waiting
+                    
+.section text
+waiting:
+    output "waiting for input: \n"
+    r3 := input()
+waiting_with_character:
+    if (r3 <s 0) goto finish_main using r5          // check for EOF
+    r5 := jumptable + r3                            // branch indirect through jump table
+    r5 := m[r0][r5]
+    goto r5
 
 
-jumptable:
-    .section init
-    n: // Push n onto the value stack, where n is a numeral (sequence of digits)
-        
-    space: //Does nothing, but may be used to separate numerals
+entering:
+    output "went to entering \n"
+    
+    goto waiting
 
-    newline: //Print the contents of the value stack
+check1:
+    r5 := valstack
+    if (r4 == r5) goto stack_error using r3  //check for nothing on stack
+    goto r1
 
-    add: //Pop y, then x from the value stack, push x + y.
+check2:
+    r5 := valstack
+    if (r4 + 1 == r5) goto stack_error using r3  //check only 1 element on stack
+    goto r1
 
-    subtract: //Pop y, then x from the value stack, push x - y.
+input_error:
+    output "Unknown character '"                               //print error statement according to ref
+    output r3
+    output "'\n"
+    goto waiting
 
-    multiply: //Pop y, then x from the value stack, push x * y.
+stack_error:
+    output "Stack underflow---expected at least 2 elements\n"
+    goto waiting
+    
+digit:
+    r3 := r3 - '0'
+    output "digit is: "
+    push r3 on stack r4
+    goto print_d linking r1
+    pop stack r4
+    output "\n"
 
-    divide: //Pop y, then x from the value stack, push x / y.
+    push r3 on stack r4
 
-    bitwise_or: //Pop y, then x from the value stack, push x | y.
-
-    bitwise_and: //Pop y, then x from the value stack, push x & y.
-
-    bitwise_comp: //Pop x from the value stack, push ~x.
-
-    change: //Pop x from the value stack, push -x.
-
-    swap: //Swap the two values on top of the value stack (exchange x and y).
-
-    duplicate: //Duplicate the value on the top of the stack.
-
-    pop_valstack: //Pop a value off the value stack and discard it.
-
-    zero_stack: //Remove all values from the value stack (zero stack).
-
-    r3 = 0
-    goto query_loop
+    goto entering
 
     
-query_loop:
-    push r3 on stack r2
-    r3 = input
-    if (r3 > 255) goto out_of_range
+mul:
+    output "called multiply\n"
+    goto check1 linking r1
+    goto check2 linking r1
+    pop r3 off stack r4
+    pop r5 off stack r4   
+    r3 := r5 * r3
+    push r3 on stack r4
+    
+    output "The product is: "
+    goto print_d linking r1
+    output "\n"
 
-    if (r3 == 110)
-        goto n
+    goto waiting 
 
-    if (r3 == 32)
-        goto space
+add:
+    output "called add\n"
+    goto check1 linking r1
+    goto check2 linking r1
+    pop r3 off stack r4
+    pop r5 off stack r4  
+    r3 := r5 + r3
+    push r3 on stack r4
+    
+    output "The sum is: "
+    goto print_d linking r1
+    output "\n"
 
-    if (r3 == 10)
-        goto newline
+    goto waiting 
 
-    if (r3 == 43)
-        goto add
+sub:
+    output "called sub\n"
+    goto check1 linking r1
+    goto check2 linking r1
+    pop r3 off stack r4
+    pop r5 off stack r4  
+    r3 := r5 - r3
+    push r3 on stack r4
+    
+    output "The difference is: "
+    goto print_d linking r1
+    output "\n"
 
-    if (r3 == 45)
-        goto subtract
+    goto waiting 
 
-    if (r3 == 42)
-        goto multiply
+div:
+    output "called div\n"
+    goto check1 linking r1
+    goto check2 linking r1
+    pop r3 off stack r4
+    pop r5 off stack r4
+    if (r3 == 0) goto div_error  
+    
+    r3 := r5 / r3
+    push r3 on stack r4
+    
+    output "The quotient is: "
+    goto print_d linking r1
+    output "\n"
 
-    if (r3 == 47)
-        goto divide
+    goto waiting
 
-    if (r3 == 124)
-        goto bitwise_or
+div_error:
+    output "Division by zero\n"
+    push r5 on stack r4
+    push r3 on stack r4
+    goto waiting
 
-    if (r3 == 38)
-        goto bitwise_and
+bor:
+    output "called bitwise or\n"
+    goto check1 linking r1
+    goto check2 linking r1
+    pop r3 off stack r4
+    pop r5 off stack r4  
+    r3 := r5 | r3
+    push r3 on stack r4
+    
+    output "The bitwise or is: "
+    goto print_d linking r1
+    output "\n"
 
-    if (r3 == 99)
-        goto change
+    goto waiting 
 
-    if (r3 == 126)
-        goto bitwise_comp
+band:
+    output "called bitwise and\n"
+    goto check1 linking r1
+    goto check2 linking r1
+    pop r3 off stack r4
+    pop r5 off stack r4  
+    r3 := r5 & r3
+    push r3 on stack r4
+    
+    output "The bitwise and is: "
+    goto print_d linking r1
+    output "\n"
 
-    if (r3 == 115)
-        goto swap
+    goto waiting
 
-    if (r3 == 100)
-        goto duplicate
 
-    if (r3 == 112)
-        goto pop_valstack
+//push_num:
+//    output "called push_num\n"
+//    goto waiting
 
-    if (r3 == 122)
-        goto zero_stack
+.section init
+finish_main:
 
-    goto query_loop:
-
-out_of_range:
-    output('input out of range')
-    // pop from stack 
-    goto main linking r1
+    output "got to finish main\n"
+    pop r3 off stack r2                             // retrieve r3 value
+    pop r5 off stack r2                             // get return value
+    r1 := 0                                         // EXIT_SUCCESS
+    goto r5
