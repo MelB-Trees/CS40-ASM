@@ -5,8 +5,8 @@ main:
 
     .section rodata
     .space 256
-    jumptable:
-    .section init 
+    //jumptable:
+    //.section init 
 
     r3 = 0
     goto init_jumptable
@@ -19,3 +19,100 @@ init_jumptable:
     r3 = r3+1
     $initializes every element in jumptable to input_error
     goto init_jumptable
+
+
+push r1 on stack r2                             // save return value
+
+
+jumptable:
+    .section init
+    n: // Push n onto the value stack, where n is a numeral (sequence of digits)
+        
+    space: //Does nothing, but may be used to separate numerals
+
+    newline: //Print the contents of the value stack
+
+    add: //Pop y, then x from the value stack, push x + y.
+
+    subtract: //Pop y, then x from the value stack, push x - y.
+
+    multiply: //Pop y, then x from the value stack, push x * y.
+
+    divide: //Pop y, then x from the value stack, push x / y.
+
+    bitwise_or: //Pop y, then x from the value stack, push x | y.
+
+    bitwise_and: //Pop y, then x from the value stack, push x & y.
+
+    bitwise_comp: //Pop x from the value stack, push ~x.
+
+    change: //Pop x from the value stack, push -x.
+
+    swap: //Swap the two values on top of the value stack (exchange x and y).
+
+    duplicate: //Duplicate the value on the top of the stack.
+
+    pop_valstack: //Pop a value off the value stack and discard it.
+
+    zero_stack: //Remove all values from the value stack (zero stack).
+
+    r3 = 0
+    goto query_loop
+
+    
+query_loop:
+    push r3 on stack r2
+    r3 = input
+    if (r3 > 255) goto out_of_range
+
+    if (r3 == 110)
+        goto n
+
+    if (r3 == 32)
+        goto space
+
+    if (r3 == 10)
+        goto newline
+
+    if (r3 == 43)
+        goto add
+
+    if (r3 == 45)
+        goto subtract
+
+    if (r3 == 42)
+        goto multiply
+
+    if (r3 == 47)
+        goto divide
+
+    if (r3 == 124)
+        goto bitwise_or
+
+    if (r3 == 38)
+        goto bitwise_and
+
+    if (r3 == 99)
+        goto change
+
+    if (r3 == 126)
+        goto bitwise_comp
+
+    if (r3 == 115)
+        goto swap
+
+    if (r3 == 100)
+        goto duplicate
+
+    if (r3 == 112)
+        goto pop_valstack
+
+    if (r3 == 122)
+        goto zero_stack
+
+    goto query_loop:
+
+out_of_range:
+    output('input out of range')
+    // pop from stack 
+    goto main linking r1
