@@ -1,12 +1,15 @@
     .zero r0
-    .temps r7
+    .temp r6, r7
     .section stk
-    .space 10000
-    endtsack:
+    .space 10000        // holds calc values
+    valstack:
+    .space 1000         // holds function calls and return values
+    callstack:
     .section init
 _ustart:
     r0 := 0
-    r2 := endstack
+    r2 := callstack
+    r4 := valstack
     goto main linking r1
 
     halt
