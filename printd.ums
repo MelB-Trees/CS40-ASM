@@ -1,60 +1,43 @@
+.section init
     .zero r0
-    .temp r6,r7 
-.section data                                       // testing data, saved in stack
-    val1: .data 65                                  
-    val2: .data 10
-    val3: .data 9                                   // single-digit number test
-    val4: .data 0                                   // single-digit number test
-    val5: .data -34560
-    val6: .data 0xffffffff                          // -1
-    val7: .data 0x80000000                          // biggest negative value
-    val8: .data 0x7fffffff                          // biggest positive value
-.section text
-main:  
-    push r1 on stack r2                             // save return value
+    .temp r6,r7
 
-    //print val1 "65"
-    push m[r0][val1] on stack r2 
-    goto print_d linking r1
-    pop stack r2
-    output "\n"
+print_d:
+    push r1 on stack r2                             // save value of r1
+    push r3 on stack r2                             // save non-volatile register
 
-    //print val3 "9"
-    push m[r0][val3] on stack r2 
-    goto print_d linking r1
-    pop stack r2
-    output "\n"
+    r3 := m[r0][r2+2]                               // get value to print from stack
+    if (r3 == 0) goto base_case                     // case where r3 is zero
+    r4 := 0x8000 * 0x10000                          // set r4 to largest negative value for comparison                                                                 
+    if (r3 >s r4) goto neg_case using r5            // case where r3 is negative but not largest negative value
+    if (r3 >=s r4) goto special_case using r5       // case where r3 is largest negative value
 
-    //print val4 "0"
-    push m[r0][val4] on stack r2 
-    goto print_d linking r1
-    pop stack r2
-    output "\n"
+    r5 := r3 / 10                                   // if r3 is single-digit number
+    if (r5 == 0) goto base_case
 
-    //print val5
-    push m[r0][val5] on stack r2 
-    goto print_d linking r1
-    pop stack r2
-    output "\n"
+    push r5 on stack r2                             // push n-1 most sig digits onto stack
+    goto print_d linking r1                         // recursive print_d call
+    pop stack r2                                    // pop n-1 most sig digits off stack
+    r3 := r3 mod 10                                 // get least significant digit
+    output r3 + '0'                                 // print least significant digit
+    goto finish_print                               
 
-    //print val6
-    push m[r0][val6] on stack r2 
-    goto print_d linking r1
-    pop stack r2
-    output "\n"
+neg_case:
+    output "-"                                      // append negative sign before printing digits
+    r5 := -r3 using r4                              // get two's complement and push onto stack
+    push r5 on stack r2                             // push two's complement onto stack
+    goto print_d linking r1                         // recursive print_d call
+    pop stack r2                                    // pop two's complement from stack
+    goto finish_print
 
-    //print val7: Biggest negative value
-    push m[r0][val7] on stack r2 
-    goto print_d linking r1
-    pop stack r2
-    output "\n"
+special_case:
+    output "-2147483648"                            // directly prints largest negative value
+    goto finish_print
 
-    //print val8
-    push m[r0][val8] on stack r2 
-    goto print_d linking r1
-    pop stack r2
-    output "\n"
-
+base_case:
+    output r3 + '0'                                 // print decimal equivalent of value 
+    
+finish_print:
+    pop r3 off stack r2                             // restore saved register
     pop r5 off stack r2                             // get return value
-    r1 := 0                                         // EXIT_SUCCESS
-    goto r5
+    goto r5                                         
