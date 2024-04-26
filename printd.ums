@@ -2,11 +2,12 @@
     .zero r0
     .temp r6,r7
 
-print_d:
+
+print_d: // print r3 in decimal, then return
     push r1 on stack r2                             // save value of r1
     push r3 on stack r2                             // save non-volatile register
 
-    r3 := m[r0][r4]                               // get value to print from valstack
+    r3 := m[r0][r4]                                 // get value to print from valstack
     if (r3 == 0) goto base_case                     // case where r3 is zero
     r5 := 0x8000 * 0x10000                          // set r5 to largest negative value for comparison   
     push r4 on stack r2                             // save r4 stack pointer                                                             
@@ -20,29 +21,30 @@ print_d:
 
     push r5 on stack r4                             // push n-1 most sig digits onto stack
     goto print_d linking r1                         // recursive print_d call
-    pop stack r4                                    // pop n-1 most sig digits off stack
-    r3 := r3 mod 10                                 // get least significant digit
-    output r3 + '0'                                 // print least significant digit
+    pop stack r4                                    // pop n-1 most significant digits off stack
+    r3 := r3 mod 10                                 // get and print least significant digit
+    output r3 + '0'                                
     goto finish_print                               
 
-neg_case:
+neg_case: // if r3 is negative, print negative sign, 
+          // then changes r3's sign and returns to recursive print_d label
     pop r4 off stack r2                             // retrieve r4 stack pointer
-    output "-"                                     // append negative sign before printing digits
-    r5 := -r3 using r5                              // get two's complement and push onto stack
-    push r5 on stack r4                             // push two's complement onto stack
+    output "-"                                      // append negative sign before printing digits
+    r5 := -r3 using r5                              // Store positive of r3 and push onto stack
+    push r5 on stack r4                         
     goto print_d linking r1                         // recursive print_d call
-    pop stack r4                                   // pop two's complement from stack
+    pop stack r4                                   
     goto finish_print
 
-special_case:
+special_case: //if r3 is the most negative number, print its value in decimal
     pop r4 off stack r2                             // retrieve r4 stack pointer
     output "-2147483648"                            // directly prints largest negative value
     goto finish_print
 
-base_case:
+base_case: //print the least significant decimal digit of r3
     output r3 + '0'                                 // print decimal equivalent of value 
     
-finish_print:
+finish_print: // restore the non-volatile registers and return
     pop r3 off stack r2                             // restore saved register
     pop r5 off stack r2                             // get return value
     goto r5                                         
