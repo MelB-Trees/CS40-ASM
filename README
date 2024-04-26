@@ -1,0 +1,51 @@
+/**********************************************************
+* Project 8: asm
+* CS 40
+* README
+* Name: Kieran Fergus (kfergu01) and Jason Wang (mwang06)
+* Date: 04/26/2024
+*********************************************************/
+
+Acknowledgements: 
+
+     Thanks to Mark, Noah, and TAs in lab and office hours! :D
+
+Correctly implemented:
+
+     Everything
+
+Incorrectly implemented:
+
+     Nothing as far as we can tell
+
+Departures from Calling Conventions:
+
+
+Print Module Implenentation:
+
+     We implemented the print module following the
+     recommended recursive model in the spec. 
+    
+Value Stack Implementation:
+
+     We represented the calculator's value stack as an
+     initialized space of 10000 words in .section stk
+     using r4 as a stack pointer, seperately from the 
+     callstack
+
+Sections:
+
+     .section init:     Initialized main and the jumptable
+     .section stk:      Declares space for the call and 
+                        value stacks    
+     .section rodata:   Declares space for the jumptable
+     .section text:     Implements the functions used by 
+                        main and the jumptable
+
+Time Spent:
+
+        Analysis:        3 hours
+
+        Writing ASM:     6 hours
+
+        Debugging:       2 hours    
