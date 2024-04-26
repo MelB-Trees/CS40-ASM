@@ -4,22 +4,22 @@
     jumptable:
     .space 256
     .section init
-main:
+main: // initializes jumptable and starts the program
     push r1 on stack r2                                             // save return value
     push r3 on stack r2                                             // save r3 value
-
-    r3 := jumptable
-
+    r3 := jumptable                                                 // set r3 to beginning of jumptable
     goto init_jumptable linking r1  
 
-init_jumptable: 
-    if (r3 >s jumptable + 255 ) goto init_jumptable_2 using r5      // leave function
+init_jumptable: // sets all values in jumptable to input_error
+                // then goes to init_jumptable_2
+    if (r3 >s jumptable + 255 ) goto init_jumptable_2 using r5      // begins next phase of initialization
+                                                                    // after setting all values to input_error
     m[r0][r3] := input_error
-    r3 := r3 + 1
-    
-    goto init_jumptable
+    r3 := r3 + 1                                                    // increments r3 (index in jumptable) by 1
+    goto init_jumptable                                             // recursively initializes values
 
-init_jumptable_2:
+init_jumptable_2: // specifies the locations in the 
+                  // jumptable for each operation 
     m[r0][jumptable + '0'] := digit 
     m[r0][jumptable + '1'] := digit 
     m[r0][jumptable + '2'] := digit 
@@ -31,7 +31,8 @@ init_jumptable_2:
     m[r0][jumptable + '8'] := digit 
     m[r0][jumptable + '9'] := digit
 
-    m[r0][jumptable + ' '] := waiting 
+    m[r0][jumptable + ' '] := waiting
+    m[r0][jumptable + '\n'] := newline 
 
     m[r0][jumptable + '*'] := mul 
     m[r0][jumptable + '+'] := add
@@ -39,167 +40,250 @@ init_jumptable_2:
     m[r0][jumptable + '/'] := div
     m[r0][jumptable + '|'] := bor
     m[r0][jumptable + '&'] := band
-
-    //m[r0][jumptable + 'n'] := push_num
-
-    goto waiting
+    m[r0][jumptable + 'c'] := change
+    m[r0][jumptable + '~'] := bcomp
+    m[r0][jumptable + 's'] := swap
+    m[r0][jumptable + 'd'] := dup
+    m[r0][jumptable + 'p'] := pop_v
+    m[r0][jumptable + 'z'] := zero 
+    
+    goto waiting                                                // finish init, begin taking input
                     
 .section text
-waiting:
-    output "waiting for input: \n"
+waiting: // represents the waiting state, places user input in r3
     r3 := input()
-waiting_with_character:
-    if (r3 <s 0) goto finish_main using r5          // check for EOF
-    r5 := jumptable + r3                            // branch indirect through jump table
+waiting_with_character: // checks for EOF, then enters jumptable
+    if (r3 <s 0) goto finish_main using r5                      // check for EOF
+    r5 := jumptable + r3                                        // branch indirect through jump table
     r5 := m[r0][r5]
     goto r5
 
+entering: // represents the entering state after recieving a numeric input
+          // places user input in r3
+    r3 := input()
+    if (r3 >=s '0') goto entering_digit using r5                // if consecutive numeric input
+                                                                // may be given, jumps to entering_digit
+    goto waiting_with_character                                 // returns to standard waiting state
+                                                                // if r3 isn't a number
+entering_digit: // represents the entering state while recieving 
+                // a multi-digit number    
+    if (r3 >s '9') goto waiting_with_character using r5         // returns to standard waiting state
+                                                                // if r3 isn't a number
+    r3 := r3 -'0'                                               // r3 gets numeric val of input
+    pop r5 off stack r4                                         // r5 holds last numeric input
+    r5 := r5 * 10                                               
+    r5 := r5 + r3                                               // appends r3 as least sig digit of r5
+    push r5 on stack r4
+    goto entering                                               // returns to entering state
 
-entering:
-    output "went to entering \n"
-    
-    goto waiting
-
-check1:
-    r5 := valstack
-    if (r4 == r5) goto stack_error using r3  //check for nothing on stack
+check1: // checks if valstack is nonempty
+    if (r4 == valstack) goto stack_error1 using r5              // check for nothing on stack
     goto r1
 
-check2:
-    r5 := valstack
-    if (r4 + 1 == r5) goto stack_error using r3  //check only 1 element on stack
+check2: // checks if valstack is storing at least 2 values
+    if (r4 == valstack) goto stack_error2 using r5              // check for nothing on stack
+    if (r4 + 1 == valstack) goto stack_error2 using r3, r5      // check only 1 element exists on stack
     goto r1
 
-input_error:
-    output "Unknown character '"                               //print error statement according to ref
-    output r3
+input_error: // outputs error message if input doesn't 
+             // correspond to an operation in the jumptable
+    output "Unknown character '"                                // print error statement according to ref
+    output r3                                                   // r3 represents user input
     output "'\n"
     goto waiting
 
-stack_error:
+stack_error1: // outputs error message if stack is empty
+    output "Stack underflow---expected at least 1 element\n"
+    goto waiting
+
+stack_error2: // outputs error message if stack has less than two elements
     output "Stack underflow---expected at least 2 elements\n"
     goto waiting
-    
-digit:
-    r3 := r3 - '0'
-    output "digit is: "
+
+div_error: // outputs error message if divisor is zero
+    output "Division by zero\n"
+    push r5 on stack r4
     push r3 on stack r4
-    goto print_d linking r1
-    pop stack r4
+    goto waiting
+    
+digit: // pushes numerical value of user input onto the stack
+    r3 := r3 - '0'                                              // changes user char input into 
+                                                                // numeric repreentation
+    push r3 on stack r4
+    goto entering                                               // goes to entering state
+
+newline:
+    r3 := r4                                                    // r3 is set to the top of valstack
+newline_loop: // loop to print all values on the stack
+    if (r3 == valstack) goto waiting using r5                   // exit when end of valstack is reached
+    r5 := m[r0][r3]                                             // accesses next element in valstack
+    output ">>> "
+    push r5 on stack r4                                         // pushes r5 onto valstack to get printed 
+    goto print_d linking r1 
     output "\n"
-
-    push r3 on stack r4
-
-    goto entering
-
+    pop stack r4                                                // removes r5 from valstack
+    r3 := r3 + 1                                                // increments r3 down valstack
+    goto newline_loop                                           // recursively prints contents of valstack
     
-mul:
-    output "called multiply\n"
-    goto check1 linking r1
+mul: // pops, then multiplies the two numbers on 
+     // top of the stack and pushes the result    
     goto check2 linking r1
     pop r3 off stack r4
     pop r5 off stack r4   
     r3 := r5 * r3
     push r3 on stack r4
-    
-    output "The product is: "
-    goto print_d linking r1
-    output "\n"
-
     goto waiting 
 
 add:
-    output "called add\n"
-    goto check1 linking r1
+     // pops, then adds the two numbers on 
+     // top of the stack and pushes the result
     goto check2 linking r1
-    pop r3 off stack r4
-    pop r5 off stack r4  
-    r3 := r5 + r3
-    push r3 on stack r4
-    
-    output "The sum is: "
-    goto print_d linking r1
-    output "\n"
-
+    pop r3 off stack r4                                         // r3 holds first number from stack
+    pop r5 off stack r4                                         // r5 holds second number from stack
+    r3 := r5 + r3                                               // r3 holds sum, push result on stack
+    push r3 on stack r4                                         
     goto waiting 
 
-sub:
-    output "called sub\n"
-    goto check1 linking r1
+sub: // pops, then subtracts the second number on stack
+     // by the first then pushes the result
     goto check2 linking r1
-    pop r3 off stack r4
-    pop r5 off stack r4  
-    r3 := r5 - r3
+    pop r3 off stack r4                                         // r3 holds first number from stack
+    pop r5 off stack r4                                         // r5 holds second number from stack
+    r3 := r5 - r3                                               // r3 holds different, push result on stack
     push r3 on stack r4
-    
-    output "The difference is: "
-    goto print_d linking r1
-    output "\n"
-
     goto waiting 
 
-div:
-    output "called div\n"
-    goto check1 linking r1
+div: // pops, then divides the second number on stack
+     // by the first then pushes the result
     goto check2 linking r1
-    pop r3 off stack r4
-    pop r5 off stack r4
-    if (r3 == 0) goto div_error  
+    pop r3 off stack r4                                         // r3 holds first number from stack
+    pop r5 off stack r4                                         // r5 holds second number from stack
+
+    if (r3 == 0) goto div_error                                 // calls error if trying to divide by 0
     
+    push r4 on stack r2                                         // save valstack address to use 
+                                                                // r4 as temp register
+    r4 := 0x8000 * 0x10000                                      // set r4 to largest neg value for comparison
+    push r5 on stack r2                                         // saves value of dividend to use r5 as temp register
+    if (r3 >=s r4) goto neg using r5                            // checks if divisor is negative and goes to
+                                                                // appropriate conditional branch based on result
+    goto pos  
+
+neg: // conditional branch if the divisor is negative, checks
+     // if dividend is positive or negative
+    pop r5 off stack r2                                         // restores value of dividend to r5
+    push r3 on stack r2                                         // saves value of divisor to use r3 as temp register
+    if (r5 >=s r4) goto neg_neg using r3                        // checks if dividend is negative and goes to
+                                                                // appropriate conditional branch based on result
+    goto neg_pos
+
+pos: // conditional branch if the divisor is positive, checks
+     // if dividend is negative
+    pop r5 off stack r2                                         // restores value of dividend to r5
+    push r3 on stack r2                                         // saves value of divisor to use r3 as temp riter
+    if (r5 >=s r4) goto pos_neg using r3                        // checks if divisor is negative and goes to
+                                                                // appropriate conditional branch based on result
+    goto pos_pos
+
+
+pos_pos: // division when dividend (r5) and  
+         // and divisor (r3) are positive
+    pop r3 off stack r2
+    pop r4 off stack r2
     r3 := r5 / r3
     push r3 on stack r4
-    
-    output "The quotient is: "
-    goto print_d linking r1
-    output "\n"
-
     goto waiting
 
-div_error:
-    output "Division by zero\n"
-    push r5 on stack r4
+pos_neg: // division when dividend (r5) is negative 
+         // and divisor (r3) is positive
+    pop r3 off stack r2
+    pop r4 off stack r2
+    r5 := -r5
+    r3 := r5 / r3
+    r3 := -r3
     push r3 on stack r4
     goto waiting
 
-bor:
-    output "called bitwise or\n"
-    goto check1 linking r1
+neg_pos: // division when dividend (r5) is positive 
+         // and divisor (r3) is negative
+    pop r3 off stack r2
+    pop r4 off stack r2
+    r3 := -r3
+    r3 := r5 / r3
+    r3 := -r3
+    push r3 on stack r4
+    goto waiting
+
+neg_neg: // division when dividend (r5) and  
+         // and divisor (r3) are negative
+    pop r3 off stack r2
+    pop r4 off stack r2
+    r3 := -r3
+    r5 := -r5
+    r3 := r5 / r3
+    push r3 on stack r4
+    goto waiting  
+
+bor: // take bitwise or of the top two numbers on 
+     // the value stack and push the result
     goto check2 linking r1
     pop r3 off stack r4
     pop r5 off stack r4  
     r3 := r5 | r3
     push r3 on stack r4
-    
-    output "The bitwise or is: "
-    goto print_d linking r1
-    output "\n"
-
     goto waiting 
 
-band:
-    output "called bitwise and\n"
-    goto check1 linking r1
+band: // take bitwise and of the top two numbers on 
+      // the value stack and push the result
     goto check2 linking r1
     pop r3 off stack r4
     pop r5 off stack r4  
     r3 := r5 & r3
     push r3 on stack r4
-    
-    output "The bitwise and is: "
-    goto print_d linking r1
-    output "\n"
-
     goto waiting
 
+change: // replace the number on top of the 
+        // value stack with its complement
+    goto check1 linking r1
+    pop r3 off stack r4
+    r3 := -r3 
+    push r3 on stack r4
+    goto waiting
 
-//push_num:
-//    output "called push_num\n"
-//    goto waiting
+bcomp: // take bitwise complement of the top two  
+       // numbers on the stack and push the result
+    goto check1 linking r1
+    pop r3 off stack r4 
+    r3 := ~r3
+    push r3 on stack r4
+    goto waiting
+
+swap: // swap the top two numbers on the value stack
+    goto check2 linking r1
+    pop r3 off stack r4
+    pop r5 off stack r4  
+    push r3 on stack r4
+    push r5 on stack r4
+    goto waiting
+
+dup: // duplicate the number on top of the value stack    
+    goto check1 linking r1
+    r3 := m[r0][r4]
+    push r3 on stack r4
+    goto waiting
+
+pop_v: // pop the number on top of the value stack
+    goto check1 linking r1
+    pop stack r4
+    goto waiting
+
+zero: // pop all numbers on the value stack
+    if (r4 == valstack) goto waiting using r5                   // exit when end of valstack is reached
+    pop stack r4
+    goto zero
 
 .section init
 finish_main:
-
-    output "got to finish main\n"
     pop r3 off stack r2                             // retrieve r3 value
     pop r5 off stack r2                             // get return value
     r1 := 0                                         // EXIT_SUCCESS
